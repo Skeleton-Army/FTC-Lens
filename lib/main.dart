@@ -43,6 +43,9 @@ class TakePictureScreenState extends State<TakePictureScreen>
   bool _isPressed = false;
   double _baseScale = 1.0;
   double _currentScale = 1.0;
+  Offset? _focusPoint;
+  double _focusScale = 0.0;
+  bool _isFocusing = false;
 
   @override
   void initState() {
@@ -103,6 +106,59 @@ class TakePictureScreenState extends State<TakePictureScreen>
     super.dispose();
   }
 
+  Future<void> _handleFocus(Offset position) async {
+    if (_isFocusing || _controller?.value.isInitialized != true || _isDisposed)
+      return;
+
+    _isFocusing = true;
+    try {
+      final CameraController cameraController = _controller!;
+      final Size screenSize = MediaQuery.of(context).size;
+
+      // Convert tap position to camera coordinates
+      final double x = position.dx / screenSize.width;
+      final double y = position.dy / screenSize.height;
+
+      setState(() {
+        _focusPoint = position;
+        _focusScale = 0.0;
+      });
+
+      // Set both focus and exposure points
+      await cameraController.setFocusPoint(Offset(x, y));
+      await cameraController.setExposurePoint(Offset(x, y));
+      await cameraController.setFocusMode(FocusMode.locked);
+      await cameraController.setExposureMode(ExposureMode.auto);
+
+      // Animate the focus scale
+      if (mounted) {
+        setState(() {
+          _focusScale = 1.0;
+        });
+      }
+
+      // Wait for animation to complete before clearing
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      // After a delay, return to auto focus
+      await Future.delayed(const Duration(seconds: 1));
+
+      if (mounted && !_isDisposed) {
+        await cameraController.setFocusMode(FocusMode.auto);
+        if (mounted) {
+          setState(() {
+            _focusPoint = null;
+            _focusScale = 0.0;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error setting focus: $e');
+    } finally {
+      _isFocusing = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_controller == null || _initializeControllerFuture == null) {
@@ -129,7 +185,34 @@ class TakePictureScreenState extends State<TakePictureScreen>
                     _setZoom(_currentScale);
                     setState(() {});
                   },
-                  child: CameraPreview(_controller!),
+                  onTapUp: (details) {
+                    _handleFocus(details.localPosition);
+                  },
+                  child: Stack(
+                    children: [
+                      CameraPreview(_controller!),
+                      if (_focusPoint != null)
+                        Positioned(
+                          left: _focusPoint!.dx - 30,
+                          top: _focusPoint!.dy - 30,
+                          child: AnimatedScale(
+                            duration: const Duration(milliseconds: 100),
+                            scale: _focusScale,
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 Positioned(
                   bottom: 100,
@@ -190,7 +273,9 @@ class TakePictureScreenState extends State<TakePictureScreen>
                                 ..scale(_isPressed ? 0.9 : 1.0)
                                 ..translate(-center, -center),
                               child: FloatingActionButton(
-                                backgroundColor: Colors.white,
+                                backgroundColor: _isPressed
+                                    ? Colors.grey[300]
+                                    : Colors.white,
                                 shape: const CircleBorder(),
                                 elevation: 4,
                                 onPressed: null,
