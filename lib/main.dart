@@ -12,7 +12,7 @@ Future<void> main() async {
   final cameras = await availableCameras();
 
   // Get a specific camera from the list of available cameras.
-  final firstCamera = cameras.first;
+  final firstCamera = cameras[0];
 
   runApp(
     MaterialApp(
@@ -58,7 +58,11 @@ class TakePictureScreenState extends State<TakePictureScreen>
     }
 
     // Create a new controller
-    _controller = CameraController(widget.camera, ResolutionPreset.medium);
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.max,
+      enableAudio: false,
+    );
 
     // Initialize the controller
     _initializeControllerFuture = _controller?.initialize().then((_) {
