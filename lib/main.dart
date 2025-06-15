@@ -41,6 +41,8 @@ class TakePictureScreenState extends State<TakePictureScreen>
   Future<void>? _initializeControllerFuture;
   bool _isDisposed = false;
   bool _isPressed = false;
+  double _baseScale = 1.0;
+  double _currentScale = 1.0;
 
   @override
   void initState() {
@@ -65,11 +67,19 @@ class TakePictureScreenState extends State<TakePictureScreen>
     );
 
     // Initialize the controller
-    _initializeControllerFuture = _controller?.initialize().then((_) {
+    _initializeControllerFuture = _controller?.initialize().then((_) async {
       if (!_isDisposed && mounted) {
+        // Set initial zoom level
+        await _controller?.setZoomLevel(1.0);
         setState(() {});
       }
     });
+  }
+
+  Future<void> _setZoom(double zoom) async {
+    if (_controller?.value.isInitialized ?? false) {
+      await _controller?.setZoomLevel(zoom);
+    }
   }
 
   @override
@@ -107,7 +117,44 @@ class TakePictureScreenState extends State<TakePictureScreen>
           if (snapshot.connectionState == ConnectionState.done) {
             return Stack(
               children: [
-                CameraPreview(_controller!),
+                GestureDetector(
+                  onScaleStart: (details) {
+                    _baseScale = _currentScale;
+                  },
+                  onScaleUpdate: (details) {
+                    _currentScale = (_baseScale * details.scale).clamp(
+                      1.0,
+                      8.0,
+                    );
+                    _setZoom(_currentScale);
+                    setState(() {});
+                  },
+                  child: CameraPreview(_controller!),
+                ),
+                Positioned(
+                  bottom: 100,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _currentScale > 1.0
+                        ? Text(
+                            '${_currentScale.toStringAsFixed(1)}x',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 3.0,
+                                  color: Colors.black,
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
                 Positioned(
                   bottom: 30,
                   left: 0,
