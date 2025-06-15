@@ -40,6 +40,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
   bool _isDisposed = false;
+  bool _isPressed = false;
 
   @override
   void initState() {
@@ -95,49 +96,98 @@ class TakePictureScreenState extends State<TakePictureScreen>
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Take a picture')),
+      appBar: AppBar(title: const Text('FTC Lens')),
       body: FutureBuilder<void>(
         future: _initializeControllerFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            return CameraPreview(_controller!);
+            return Stack(
+              children: [
+                CameraPreview(_controller!),
+                Positioned(
+                  bottom: 30,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: SizedBox(
+                      width: 70,
+                      height: 70,
+                      child: GestureDetector(
+                        onTapDown: (_) {
+                          setState(() {
+                            _isPressed = true;
+                          });
+                        },
+                        onTapUp: (_) {
+                          setState(() {
+                            _isPressed = false;
+                          });
+                          _takePicture();
+                        },
+                        onTapCancel: () {
+                          setState(() {
+                            _isPressed = false;
+                          });
+                        },
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final center = constraints.maxWidth / 2;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 100),
+                              transform: Matrix4.identity()
+                                ..translate(center, center)
+                                ..scale(_isPressed ? 0.9 : 1.0)
+                                ..translate(-center, -center),
+                              child: FloatingActionButton(
+                                backgroundColor: Colors.white,
+                                shape: const CircleBorder(),
+                                elevation: 4,
+                                onPressed: null,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
           } else {
             return const Center(child: CircularProgressIndicator());
           }
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          try {
-            if (_controller == null) return;
-
-            await _initializeControllerFuture;
-            final image = await _controller!.takePicture();
-
-            if (!context.mounted) return;
-
-            await Gal.putImage(image.path);
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Picture saved to gallery!'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          } catch (e) {
-            print(e);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error saving picture: $e'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            }
-          }
-        },
-        child: const Icon(Icons.camera_alt),
-      ),
     );
+  }
+
+  Future<void> _takePicture() async {
+    try {
+      if (_controller == null) return;
+
+      await _initializeControllerFuture;
+      final image = await _controller!.takePicture();
+
+      if (!context.mounted) return;
+
+      await Gal.putImage(image.path);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Picture saved to gallery!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print(e);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving picture: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }
