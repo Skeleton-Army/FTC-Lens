@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:ui';
+import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 Future<void> main() async {
   // Ensure that plugin services are initialized so that `availableCameras()`
@@ -46,6 +49,10 @@ class TakePictureScreenState extends State<TakePictureScreen>
   Offset? _focusPoint;
   double _focusScale = 0.0;
   bool _isFocusing = false;
+  final TextRecognizer _textRecognizer = TextRecognizer();
+  List<TextBlock> _detectedNumbers = [];
+  Timer? _recognitionTimer;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -54,29 +61,85 @@ class TakePictureScreenState extends State<TakePictureScreen>
     _initializeCamera();
   }
 
-  Future<void> _initializeCamera() async {
-    if (_isDisposed) return;
+  @override
+  void dispose() {
+    _isDisposed = true;
+    WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
+    _textRecognizer.close();
+    _recognitionTimer?.cancel();
+    super.dispose();
+  }
 
-    // Dispose of the previous controller if it exists
+  Future<void> _processImage() async {
+    if (_isDisposed || _isProcessing || _controller == null) {
+      return;
+    }
+    _isProcessing = true;
+
+    try {
+      final XFile image = await _controller!.takePicture();
+      final inputImage = InputImage.fromFilePath(image.path);
+      final recognizedText = await _textRecognizer.processImage(inputImage);
+
+      final numbers = recognizedText.blocks.where((block) {
+        final text = block.text.trim().replaceAll(' ', '');
+        return RegExp(r'^\d{4,5}$').hasMatch(text);
+      }).toList();
+
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _detectedNumbers = numbers;
+        });
+      }
+
+      // Delete the temporary image file
+      final file = File(image.path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e, stackTrace) {
+      print('Error processing image: $e');
+      print('Stack trace: $stackTrace');
+    } finally {
+      _isProcessing = false;
+    }
+  }
+
+  Future<void> _initializeCamera() async {
+    if (_isDisposed) {
+      return;
+    }
+
     if (_controller?.value.isInitialized ?? false) {
       await _controller?.dispose();
     }
 
-    // Create a new controller
     _controller = CameraController(
       widget.camera,
-      ResolutionPreset.max,
+      ResolutionPreset.high,
       enableAudio: false,
     );
 
-    // Initialize the controller
-    _initializeControllerFuture = _controller?.initialize().then((_) async {
-      if (!_isDisposed && mounted) {
-        // Set initial zoom level
-        await _controller?.setZoomLevel(1.0);
-        setState(() {});
-      }
-    });
+    _initializeControllerFuture = _controller
+        ?.initialize()
+        .then((_) async {
+          if (!_isDisposed && mounted) {
+            await _controller?.setZoomLevel(1.0);
+            await _controller?.setFlashMode(FlashMode.off);
+
+            _recognitionTimer?.cancel();
+            _recognitionTimer = Timer.periodic(const Duration(seconds: 1), (
+              timer,
+            ) {
+              _processImage();
+            });
+            setState(() {});
+          }
+        })
+        .catchError((error) {
+          print('Error initializing camera: $error');
+        });
   }
 
   Future<void> _setZoom(double zoom) async {
@@ -88,22 +151,13 @@ class TakePictureScreenState extends State<TakePictureScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
-      // Reinitialize the camera when the app is resumed
       await _initializeCamera();
     } else if (state == AppLifecycleState.inactive) {
-      // Dispose the camera when the app is inactive
+      _recognitionTimer?.cancel();
       if (_controller?.value.isInitialized ?? false) {
         await _controller?.dispose();
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _isDisposed = true;
-    WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
-    super.dispose();
   }
 
   Future<void> _handleFocus(Offset position) async {
@@ -211,6 +265,47 @@ class TakePictureScreenState extends State<TakePictureScreen>
                             ),
                           ),
                         ),
+                      ..._detectedNumbers.map((block) {
+                        final rect = block.boundingBox;
+                        // Scale the rectangle to match the preview size
+                        final previewSize = MediaQuery.of(context).size;
+                        final scaledRect = Rect.fromLTWH(
+                          rect.left *
+                              (previewSize.width /
+                                  _controller!.value.previewSize!.width),
+                          rect.top *
+                              (previewSize.height /
+                                  _controller!.value.previewSize!.height),
+                          rect.width *
+                              (previewSize.width /
+                                  _controller!.value.previewSize!.width),
+                          rect.height *
+                              (previewSize.height /
+                                  _controller!.value.previewSize!.height),
+                        );
+                        return Positioned(
+                          left: scaledRect.left,
+                          top: scaledRect.top,
+                          child: Container(
+                            width: scaledRect.width,
+                            height: scaledRect.height,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'XXXXX',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -302,18 +397,86 @@ class TakePictureScreenState extends State<TakePictureScreen>
       if (_controller == null) return;
 
       await _initializeControllerFuture;
-      final image = await _controller!.takePicture();
+      final cameraImage = await _controller!.takePicture();
 
       if (!context.mounted) return;
 
-      await Gal.putImage(image.path);
+      // Create a custom painter to draw overlays
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Picture saved to gallery!'),
-          duration: Duration(seconds: 2),
-        ),
+      // Draw the camera image
+      final imageBytes = await cameraImage.readAsBytes();
+      final codec = await instantiateImageCodec(imageBytes);
+      final frameInfo = await codec.getNextFrame();
+      final capturedImage = frameInfo.image;
+
+      // Use the actual image dimensions
+      final imageSize = Size(
+        capturedImage.width.toDouble(),
+        capturedImage.height.toDouble(),
       );
+
+      // Draw the image
+      canvas.drawImage(capturedImage, Offset.zero, Paint());
+
+      // Draw the number overlays
+      for (var block in _detectedNumbers) {
+        final rect = block.boundingBox;
+
+        // Use the same positioning logic as the camera preview
+        final paint = Paint()
+          ..color = Colors.red
+          ..style = PaintingStyle.fill;
+
+        canvas.drawRect(
+          Rect.fromLTWH(rect.left, rect.top, rect.width, rect.height),
+          paint,
+        );
+
+        // Draw the text
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: 'XXXXX',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(
+          canvas,
+          Offset(
+            rect.left + (rect.width - textPainter.width) / 2,
+            rect.top + (rect.height - textPainter.height) / 2,
+          ),
+        );
+      }
+
+      // Convert the canvas to an image using the actual image dimensions
+      final picture = recorder.endRecording();
+      final overlayImage = await picture.toImage(
+        imageSize.width.toInt(),
+        imageSize.height.toInt(),
+      );
+      final overlayBytes = await overlayImage.toByteData(
+        format: ImageByteFormat.png,
+      );
+
+      if (overlayBytes != null) {
+        // Save the combined image
+        await Gal.putImageBytes(overlayBytes.buffer.asUint8List());
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Picture with overlays saved to gallery!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       print(e);
       if (context.mounted) {
