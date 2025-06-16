@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from "react-native";
+import { CameraRoll } from "@react-native-camera-roll/camera-roll";
+import { useRef } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
   Camera,
   useCameraDevice,
@@ -6,8 +8,27 @@ import {
 } from "react-native-vision-camera";
 
 export default function Index() {
-  const { hasPermission, requestPermission } = useCameraPermission();
+  const devices = Camera.getAvailableCameraDevices();
+  console.log(devices);
   const device = useCameraDevice("back");
+  const { hasPermission, requestPermission } = useCameraPermission();
+
+  const camera = useRef<Camera>(null);
+
+  const takePhoto = async () => {
+    try {
+      if (camera.current) {
+        const photo = await camera.current.takePhoto();
+        await CameraRoll.saveAsset(`file://${photo.path}`, {
+          type: "photo",
+        });
+        Alert.alert("Success", "Photo saved to gallery!");
+      }
+    } catch (error) {
+      console.error("Failed to take photo:", error);
+      Alert.alert("Error", "Failed to save photo to gallery");
+    }
+  };
 
   if (!hasPermission) {
     return (
@@ -30,7 +51,16 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Camera style={StyleSheet.absoluteFill} device={device} isActive={true} />
+      <Camera
+        ref={camera}
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={true}
+        photo={true}
+      />
+      <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
+        <View style={styles.captureButtonInner} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -47,5 +77,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  captureButton: {
+    position: "absolute",
+    bottom: 50,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  captureButtonInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "white",
   },
 });
