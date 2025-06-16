@@ -1,19 +1,57 @@
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import { useRef } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Reanimated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedProps,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import {
   Camera,
+  CameraProps,
   useCameraDevice,
   useCameraPermission,
 } from "react-native-vision-camera";
 
+Reanimated.addWhitelistedNativeProps({
+  zoom: true,
+});
+const ReanimatedCamera = Reanimated.createAnimatedComponent(Camera);
+
 export default function Index() {
-  const devices = Camera.getAvailableCameraDevices();
-  console.log(devices);
   const device = useCameraDevice("back");
   const { hasPermission, requestPermission } = useCameraPermission();
 
   const camera = useRef<Camera>(null);
+  const zoom = useSharedValue(device?.neutralZoom ?? 1);
+  const zoomOffset = useSharedValue(0);
+
+  const gesture = Gesture.Pinch()
+    .onBegin(() => {
+      zoomOffset.value = zoom.value;
+    })
+    .onUpdate((event) => {
+      const z = zoomOffset.value * event.scale;
+      const newZoom = interpolate(
+        z,
+        [1, 10],
+        [device?.minZoom ?? 1, device?.maxZoom ?? 10],
+        Extrapolation.CLAMP
+      );
+      zoom.value = withSpring(newZoom, {
+        damping: 50,
+        stiffness: 500,
+        mass: 0.1,
+      });
+    });
+
+  const animatedProps = useAnimatedProps<CameraProps>(
+    () => ({ zoom: zoom.value }),
+    [zoom]
+  );
 
   const takePhoto = async () => {
     try {
@@ -51,13 +89,16 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Camera
-        ref={camera}
-        style={StyleSheet.absoluteFill}
-        device={device}
-        isActive={true}
-        photo={true}
-      />
+      <GestureDetector gesture={gesture}>
+        <ReanimatedCamera
+          ref={camera}
+          style={StyleSheet.absoluteFill}
+          device={device}
+          isActive={true}
+          animatedProps={animatedProps}
+          photo={true}
+        />
+      </GestureDetector>
       <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
         <View style={styles.captureButtonInner} />
       </TouchableOpacity>
