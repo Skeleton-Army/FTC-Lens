@@ -1,5 +1,6 @@
 import { scanOCR } from "@ismaelmoreiraa/vision-camera-ocr";
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
+import { Skia } from "@shopify/react-native-skia";
 import { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -10,6 +11,7 @@ import Reanimated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import ViewShot from "react-native-view-shot";
 import {
   Camera,
   CameraProps,
@@ -17,6 +19,7 @@ import {
   useCameraDevice,
   useCameraPermission,
   useFrameProcessor,
+  useSkiaFrameProcessor,
 } from "react-native-vision-camera";
 import { Worklets } from "react-native-worklets-core";
 
@@ -30,6 +33,7 @@ export default function Index() {
   const { hasPermission, requestPermission } = useCameraPermission();
 
   const camera = useRef<Camera>(null);
+  const viewShotRef = useRef<ViewShot>(null);
   const zoom = useSharedValue(device?.neutralZoom ?? 1);
   const zoomOffset = useSharedValue(0);
   const [detectedNumbers, setDetectedNumbers] = useState<any[]>([]);
@@ -77,6 +81,18 @@ export default function Index() {
     [onNumberDetected]
   );
 
+  const skiaFrameProcessor = useSkiaFrameProcessor((frame) => {
+    "worklet";
+    frame.render();
+
+    const centerX = frame.width / 2;
+    const centerY = frame.height / 2;
+    const rect = Skia.XYWHRect(centerX, centerY, 150, 150);
+    const paint = Skia.Paint();
+    paint.setColor(Skia.Color("red"));
+    frame.drawRect(rect, paint);
+  }, []);
+
   const gesture = Gesture.Pinch()
     .onBegin(() => {
       zoomOffset.value = zoom.value;
@@ -103,12 +119,15 @@ export default function Index() {
 
   const takePhoto = async () => {
     try {
-      if (camera.current) {
-        const photo = await camera.current.takePhoto();
-        await CameraRoll.saveAsset(`file://${photo.path}`, {
+      if (viewShotRef.current && viewShotRef.current.capture) {
+        // Capture the entire screen including the Skia overlay
+        const uri = await viewShotRef.current.capture();
+
+        // Save to camera roll
+        await CameraRoll.saveAsset(uri, {
           type: "photo",
         });
-        Alert.alert("Success", "Photo saved to gallery!");
+        Alert.alert("Success", "Photo with overlay saved to gallery!");
       }
     } catch (error) {
       console.error("Failed to take photo:", error);
@@ -136,7 +155,11 @@ export default function Index() {
   }
 
   return (
-    <View style={styles.container}>
+    <ViewShot
+      ref={viewShotRef}
+      style={styles.container}
+      options={{ format: "jpg", quality: 1 }}
+    >
       <GestureDetector gesture={gesture}>
         <ReanimatedCamera
           ref={camera}
@@ -145,14 +168,14 @@ export default function Index() {
           isActive={true}
           animatedProps={animatedProps}
           photo={true}
-          frameProcessor={frameProcessor}
+          frameProcessor={skiaFrameProcessor}
         />
       </GestureDetector>
 
       <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
         <View style={styles.captureButtonInner} />
       </TouchableOpacity>
-    </View>
+    </ViewShot>
   );
 }
 
