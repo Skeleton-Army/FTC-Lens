@@ -1,6 +1,6 @@
 import { scanOCR } from "@ismaelmoreiraa/vision-camera-ocr";
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, {
@@ -32,6 +32,50 @@ export default function Index() {
   const camera = useRef<Camera>(null);
   const zoom = useSharedValue(device?.neutralZoom ?? 1);
   const zoomOffset = useSharedValue(0);
+  const [detectedNumbers, setDetectedNumbers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (detectedNumbers.length === 0) return;
+    console.log("Current detected numbers list:", detectedNumbers);
+  }, [detectedNumbers]);
+
+  // Function to update detected numbers - this will be called from worklet
+  const updateDetectedNumbers = (detectedNumbers: any[]) => {
+    setDetectedNumbers(detectedNumbers);
+  };
+
+  const onNumberDetected = Worklets.createRunOnJS(updateDetectedNumbers);
+
+  const frameProcessor = useFrameProcessor(
+    (frame) => {
+      "worklet";
+
+      runAsync(frame, () => {
+        "worklet";
+        const scannedOcr = scanOCR(frame);
+        const detectedNumbers: any[] = [];
+
+        scannedOcr.result.blocks.forEach((block) => {
+          block.lines.forEach((line) => {
+            line.elements.forEach((word) => {
+              // Check if text is a 4-5 digit number
+              if (/\b\d{4,5}\b/g.test(word.text)) {
+                console.log(word.text);
+
+                detectedNumbers.push({
+                  text: word.text,
+                  boundingBox: word.boundingBox,
+                });
+              }
+            });
+          });
+        });
+
+        onNumberDetected(detectedNumbers);
+      });
+    },
+    [onNumberDetected]
+  );
 
   const gesture = Gesture.Pinch()
     .onBegin(() => {
@@ -55,39 +99,6 @@ export default function Index() {
   const animatedProps = useAnimatedProps<CameraProps>(
     () => ({ zoom: zoom.value }),
     [zoom]
-  );
-
-  const onNumberDetected = Worklets.createRunOnJS(() => {
-    "worklet";
-    console.log("HELLO!");
-  });
-
-  const frameProcessor = useFrameProcessor(
-    (frame) => {
-      "worklet";
-
-      runAsync(frame, () => {
-        "worklet";
-        try {
-          const scannedOcr = scanOCR(frame);
-          scannedOcr.result.blocks.forEach((block) => {
-            block.lines.forEach((line) => {
-              line.elements.forEach((word) => {
-                // Check if text is a 4-5 digit number
-                if (/\b\d{4,5}\b/g.test(word.text)) {
-                  console.log(word.text);
-                  console.log(word.boundingBox);
-                  onNumberDetected();
-                }
-              });
-            });
-          });
-        } catch {
-          // Silently handle errors to prevent crashes
-        }
-      });
-    },
-    [onNumberDetected]
   );
 
   const takePhoto = async () => {
