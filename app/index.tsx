@@ -13,10 +13,12 @@ import Reanimated, {
 import {
   Camera,
   CameraProps,
+  runAsync,
   useCameraDevice,
   useCameraPermission,
   useFrameProcessor,
 } from "react-native-vision-camera";
+import { Worklets } from "react-native-worklets-core";
 
 Reanimated.addWhitelistedNativeProps({
   zoom: true,
@@ -55,28 +57,38 @@ export default function Index() {
     [zoom]
   );
 
-  const frameProcessor = useFrameProcessor((frame) => {
+  const onNumberDetected = Worklets.createRunOnJS(() => {
     "worklet";
-    // Skip frames to reduce lag (process every 15th frame)
-    if (frame.timestamp % 15 !== 0) return;
+    console.log("HELLO!");
+  });
 
-    try {
-      const scannedOcr = scanOCR(frame);
-      scannedOcr.result.blocks.forEach((block) => {
-        block.lines.forEach((line) => {
-          line.elements.forEach((word) => {
-            // Check if text is a 4-5 digit number
-            if (/\b\d{4,5}\b/g.test(word.text)) {
-              console.log(word.text);
-              console.log(word.boundingBox);
-            }
+  const frameProcessor = useFrameProcessor(
+    (frame) => {
+      "worklet";
+
+      runAsync(frame, () => {
+        "worklet";
+        try {
+          const scannedOcr = scanOCR(frame);
+          scannedOcr.result.blocks.forEach((block) => {
+            block.lines.forEach((line) => {
+              line.elements.forEach((word) => {
+                // Check if text is a 4-5 digit number
+                if (/\b\d{4,5}\b/g.test(word.text)) {
+                  console.log(word.text);
+                  console.log(word.boundingBox);
+                  onNumberDetected();
+                }
+              });
+            });
           });
-        });
+        } catch {
+          // Silently handle errors to prevent crashes
+        }
       });
-    } catch {
-      // Silently handle errors to prevent crashes
-    }
-  }, []);
+    },
+    [onNumberDetected]
+  );
 
   const takePhoto = async () => {
     try {
