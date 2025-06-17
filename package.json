@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
+    "@ismaelmoreiraa/vision-camera-ocr": "^3.0.2",
     "@react-native-camera-roll/camera-roll": "^7.10.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",

@@ -1,3 +1,4 @@
+import { scanOCR } from "@ismaelmoreiraa/vision-camera-ocr";
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import { useRef } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -14,6 +15,7 @@ import {
   CameraProps,
   useCameraDevice,
   useCameraPermission,
+  useFrameProcessor,
 } from "react-native-vision-camera";
 
 Reanimated.addWhitelistedNativeProps({
@@ -52,6 +54,29 @@ export default function Index() {
     () => ({ zoom: zoom.value }),
     [zoom]
   );
+
+  const frameProcessor = useFrameProcessor((frame) => {
+    "worklet";
+    // Skip frames to reduce lag (process every 15th frame)
+    if (frame.timestamp % 15 !== 0) return;
+
+    try {
+      const scannedOcr = scanOCR(frame);
+      scannedOcr.result.blocks.forEach((block) => {
+        block.lines.forEach((line) => {
+          line.elements.forEach((word) => {
+            // Check if text is a 4-5 digit number
+            if (/\b\d{4,5}\b/g.test(word.text)) {
+              console.log(word.text);
+              console.log(word.boundingBox);
+            }
+          });
+        });
+      });
+    } catch {
+      // Silently handle errors to prevent crashes
+    }
+  }, []);
 
   const takePhoto = async () => {
     try {
@@ -97,8 +122,10 @@ export default function Index() {
           isActive={true}
           animatedProps={animatedProps}
           photo={true}
+          frameProcessor={frameProcessor}
         />
       </GestureDetector>
+
       <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
         <View style={styles.captureButtonInner} />
       </TouchableOpacity>
