@@ -14,8 +14,10 @@ import Reanimated, {
   Extrapolation,
   interpolate,
   useAnimatedProps,
+  useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import ViewShot from "react-native-view-shot";
 import {
@@ -43,6 +45,8 @@ export default function Index() {
   const zoomOffset = useSharedValue(0);
   const [detectedNumbers, setDetectedNumbers] = useState<any[]>([]);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
+  const flashOpacity = useSharedValue(0);
+  const toastOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (detectedNumbers.length === 0) return;
@@ -122,6 +126,10 @@ export default function Index() {
         // Step 2: Set the captured photo URI to display it inside ViewShot
         // This allows ViewShot to capture the photo + overlay together
         setCapturedPhotoUri(photoUri);
+
+        flashOpacity.value = withTiming(1, { duration: 100 }, () => {
+          flashOpacity.value = withTiming(0, { duration: 100 });
+        });
       }
     } catch (error) {
       console.error("Failed to take photo:", error);
@@ -146,13 +154,24 @@ export default function Index() {
           type: "photo",
         });
 
-        Alert.alert("Success", "Photo with overlay saved to gallery!");
+        toastOpacity.value = withTiming(1, { duration: 300 });
+        setTimeout(() => {
+          toastOpacity.value = withTiming(0, { duration: 300 });
+        }, 2000);
       } catch (error) {
         console.error("Failed to capture or save ViewShot:", error);
         Alert.alert("Error", "Failed to save photo to gallery");
       }
     }
   };
+
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
+  }));
+
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: toastOpacity.value,
+  }));
 
   if (!hasPermission) {
     return (
@@ -212,6 +231,14 @@ export default function Index() {
       <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
         <View style={styles.captureButtonInner} />
       </TouchableOpacity>
+
+      {/* Flash overlay that animates when taking a photo */}
+      <Reanimated.View style={[styles.flashOverlay, flashStyle]} />
+
+      {/* Saved message toast */}
+      <Reanimated.View style={[styles.savedMessage, toastStyle]}>
+        <Text style={styles.savedMessageText}>Photo saved to gallery</Text>
+      </Reanimated.View>
     </View>
   );
 }
@@ -231,13 +258,14 @@ const styles = StyleSheet.create({
   },
   captureButton: {
     position: "absolute",
-    bottom: 50,
+    bottom: 80,
     width: 70,
     height: 70,
     borderRadius: 35,
     backgroundColor: "rgba(255, 255, 255, 0.3)",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 1000,
   },
   captureButtonInner: {
     width: 60,
@@ -252,5 +280,30 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     backgroundColor: "rgba(255, 0, 0, 0.3)",
+  },
+  flashOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "black",
+    opacity: 0.5,
+  },
+  savedMessage: {
+    position: "absolute",
+    top: 50,
+    alignSelf: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+    zIndex: 1001,
+  },
+  savedMessageText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
