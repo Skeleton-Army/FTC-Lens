@@ -1,8 +1,14 @@
 import { scanOCR } from "@ismaelmoreiraa/vision-camera-ocr";
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
-import { Skia } from "@shopify/react-native-skia";
 import { useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, {
   Extrapolation,
@@ -19,7 +25,6 @@ import {
   useCameraDevice,
   useCameraPermission,
   useFrameProcessor,
-  useSkiaFrameProcessor,
 } from "react-native-vision-camera";
 import { Worklets } from "react-native-worklets-core";
 
@@ -37,6 +42,7 @@ export default function Index() {
   const zoom = useSharedValue(device?.neutralZoom ?? 1);
   const zoomOffset = useSharedValue(0);
   const [detectedNumbers, setDetectedNumbers] = useState<any[]>([]);
+  const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
 
   useEffect(() => {
     if (detectedNumbers.length === 0) return;
@@ -81,18 +87,6 @@ export default function Index() {
     [onNumberDetected]
   );
 
-  const skiaFrameProcessor = useSkiaFrameProcessor((frame) => {
-    "worklet";
-    frame.render();
-
-    const centerX = frame.width / 2;
-    const centerY = frame.height / 2;
-    const rect = Skia.XYWHRect(centerX, centerY, 150, 150);
-    const paint = Skia.Paint();
-    paint.setColor(Skia.Color("red"));
-    frame.drawRect(rect, paint);
-  }, []);
-
   const gesture = Gesture.Pinch()
     .onBegin(() => {
       zoomOffset.value = zoom.value;
@@ -119,19 +113,44 @@ export default function Index() {
 
   const takePhoto = async () => {
     try {
-      if (viewShotRef.current && viewShotRef.current.capture) {
-        // Capture the entire screen including the Skia overlay
-        const uri = await viewShotRef.current.capture();
+      if (camera.current) {
+        // Step 1: Take a photo using the camera's native photo capture
+        // This gives us the actual camera image without any overlays
+        const photo = await camera.current.takePhoto();
+        const photoUri = `file://${photo.path}`;
 
-        // Save to camera roll
-        await CameraRoll.saveAsset(uri, {
-          type: "photo",
-        });
-        Alert.alert("Success", "Photo with overlay saved to gallery!");
+        // Step 2: Set the captured photo URI to display it inside ViewShot
+        // This allows ViewShot to capture the photo + overlay together
+        setCapturedPhotoUri(photoUri);
       }
     } catch (error) {
       console.error("Failed to take photo:", error);
       Alert.alert("Error", "Failed to save photo to gallery");
+    }
+  };
+
+  // This function is called when the captured photo image finishes loading
+  // We wait for the image to load before capturing ViewShot to ensure everything is rendered
+  const handleImageLoad = async () => {
+    if (viewShotRef.current && viewShotRef.current.capture) {
+      try {
+        // Step 3: Capture ViewShot after the image has loaded
+        // This captures the photo + overlay as a single image
+        const viewShotUri = await viewShotRef.current.capture();
+
+        // Step 4: Clear the captured photo URI as it is not needed anymore
+        setCapturedPhotoUri(null);
+
+        // Step 5: Save the ViewShot capture (photo + overlay) to camera roll
+        await CameraRoll.saveAsset(viewShotUri, {
+          type: "photo",
+        });
+
+        Alert.alert("Success", "Photo with overlay saved to gallery!");
+      } catch (error) {
+        console.error("Failed to capture or save ViewShot:", error);
+        Alert.alert("Error", "Failed to save photo to gallery");
+      }
     }
   };
 
@@ -155,11 +174,27 @@ export default function Index() {
   }
 
   return (
-    <ViewShot
-      ref={viewShotRef}
-      style={styles.container}
-      options={{ format: "jpg", quality: 1 }}
-    >
+    <View style={styles.container}>
+      {/* ViewShot captures everything inside it as an image */}
+      {/* We put the captured photo image inside ViewShot so it gets captured with the overlay */}
+      <ViewShot
+        ref={viewShotRef}
+        style={StyleSheet.absoluteFill}
+        options={{ format: "jpg", quality: 1 }}
+      >
+        {capturedPhotoUri && (
+          <Image
+            source={{ uri: capturedPhotoUri }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            fadeDuration={0}
+            onLoad={handleImageLoad}
+          />
+        )}
+
+        <View style={styles.redSquare} />
+      </ViewShot>
+
       <GestureDetector gesture={gesture}>
         <ReanimatedCamera
           ref={camera}
@@ -168,14 +203,16 @@ export default function Index() {
           isActive={true}
           animatedProps={animatedProps}
           photo={true}
-          frameProcessor={skiaFrameProcessor}
+          frameProcessor={frameProcessor}
         />
       </GestureDetector>
+
+      <View style={styles.redSquare} />
 
       <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
         <View style={styles.captureButtonInner} />
       </TouchableOpacity>
-    </ViewShot>
+    </View>
   );
 }
 
@@ -207,5 +244,13 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: "white",
+  },
+  redSquare: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(255, 0, 0, 0.3)",
   },
 });
