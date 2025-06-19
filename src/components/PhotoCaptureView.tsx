@@ -1,17 +1,21 @@
 import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, StyleSheet } from "react-native";
 import ViewShot from "react-native-view-shot";
+import { DetectedNumber } from "../types/CameraTypes";
+import { NumberOverlays } from "./NumberOverlays";
 
 interface PhotoCaptureViewProps {
   viewShotRef: React.RefObject<ViewShot | null>;
   capturedPhotoUri: string | null;
   onImageLoad: () => void;
+  detectedNumbers?: DetectedNumber[];
 }
 
 export const PhotoCaptureView: React.FC<PhotoCaptureViewProps> = ({
   viewShotRef,
   capturedPhotoUri,
   onImageLoad,
+  detectedNumbers = [],
 }) => {
   return (
     <ViewShot
@@ -29,18 +33,7 @@ export const PhotoCaptureView: React.FC<PhotoCaptureViewProps> = ({
         />
       )}
 
-      <View style={styles.redSquare} />
+      <NumberOverlays detectedNumbers={detectedNumbers} />
     </ViewShot>
   );
 };
-
-const styles = StyleSheet.create({
-  redSquare: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(255, 0, 0, 0.3)",
-  },
-});

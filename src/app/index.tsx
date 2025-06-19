@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import { CameraView } from "../components/CameraView";
 import { CaptureButton } from "../components/CaptureButton";
+import { NumberOverlays } from "../components/NumberOverlays";
 import { FlashOverlay, ToastMessage } from "../components/Overlays";
 import { NoDeviceView, NoPermissionView } from "../components/PermissionViews";
 import { PhotoCaptureView } from "../components/PhotoCaptureView";
@@ -43,6 +44,7 @@ export default function Index() {
         viewShotRef={viewShotRef}
         capturedPhotoUri={capturedPhotoUri}
         onImageLoad={handleImageLoad}
+        detectedNumbers={detectedNumbers}
       />
 
       {/* Main camera view with gesture handling */}
@@ -54,8 +56,8 @@ export default function Index() {
         onNumberDetected={onNumberDetected}
       />
 
-      {/* Red square overlay */}
-      <View style={cameraStyles.redSquare} />
+      {/* Live number overlays */}
+      <NumberOverlays detectedNumbers={detectedNumbers} />
 
       {/* Capture button */}
       <CaptureButton onPress={takePhoto} />

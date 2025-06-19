@@ -29,14 +29,7 @@ export const cameraStyles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: "white",
-  },
-  redSquare: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(255, 0, 0, 0.3)",
+    zIndex: 1000,
   },
   flashOverlay: {
     position: "absolute",

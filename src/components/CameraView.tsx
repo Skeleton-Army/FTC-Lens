@@ -53,6 +53,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
         animatedProps={animatedProps}
         photo={true}
         frameProcessor={frameProcessor}
+        // resizeMode={"contain"}
       />
     </GestureDetector>
   );
