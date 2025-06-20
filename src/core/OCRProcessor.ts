@@ -1,16 +1,11 @@
 import { scanOCR } from "@ismaelmoreiraa/vision-camera-ocr";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { runAsync } from "react-native-vision-camera";
 import { Worklets } from "react-native-worklets-core";
 import { DetectedNumber } from "../types/CameraTypes";
 
 export const useOCRDetection = () => {
   const [detectedNumbers, setDetectedNumbers] = useState<DetectedNumber[]>([]);
-
-  useEffect(() => {
-    if (detectedNumbers.length === 0) return;
-    console.log("Current detected numbers list:", detectedNumbers);
-  }, [detectedNumbers]);
 
   const updateDetectedNumbers = (detectedNumbers: DetectedNumber[]) => {
     setDetectedNumbers(detectedNumbers);
@@ -44,11 +39,12 @@ export const processOCRFrame = (
           // Check if text is a 4-5 digit number
           if (/\b\d{4,5}\b/g.test(word.text)) {
             console.log(word.text);
+            console.log(word.cornerPoints);
 
-            if (word.boundingBox) {
+            if (word.cornerPoints) {
               detectedNumbers.push({
                 text: word.text,
-                boundingBox: word.boundingBox,
+                cornerPoints: word.cornerPoints,
               });
             }
           }

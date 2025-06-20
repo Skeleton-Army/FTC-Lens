@@ -1,3 +1,4 @@
+import { Skia } from "@shopify/react-native-skia";
 import React from "react";
 import { StyleSheet } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -5,7 +6,7 @@ import Reanimated, { useAnimatedProps } from "react-native-reanimated";
 import {
   Camera,
   CameraProps,
-  useFrameProcessor,
+  useSkiaFrameProcessor,
 } from "react-native-vision-camera";
 import { processOCRFrame } from "../core/OCRProcessor";
 import { DetectedNumber } from "../types/CameraTypes";
@@ -30,10 +31,30 @@ export const CameraView: React.FC<CameraViewProps> = ({
   gesture,
   onNumberDetected,
 }) => {
-  const frameProcessor = useFrameProcessor(
+  // const [pixelRatio, setPixelRatio] = React.useState<number>(1);
+
+  // const frameProcessor = useFrameProcessor(
+  //   (frame) => {
+  //     "worklet";
+  //     processOCRFrame(frame, onNumberDetected);
+  //   },
+  //   [onNumberDetected]
+  // );
+
+  const frameProcessor = useSkiaFrameProcessor(
     (frame) => {
       "worklet";
+      frame.render();
+
       processOCRFrame(frame, onNumberDetected);
+
+      // Draw dot at (300, 300)
+      const centerX = 300;
+      const centerY = 300;
+      const rect = Skia.XYWHRect(centerX, centerY, 10, 10);
+      const paint = Skia.Paint();
+      paint.setColor(Skia.Color("red"));
+      frame.drawRect(rect, paint);
     },
     [onNumberDetected]
   );

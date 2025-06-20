@@ -1,11 +1,11 @@
+type Point = {
+  x: number;
+  y: number;
+};
+
 export interface DetectedNumber {
   text: string;
-  boundingBox: {
-    top: number;
-    left: number;
-    right: number;
-    bottom: number;
-  };
+  cornerPoints: Point[];
 }
 
 export interface CameraState {

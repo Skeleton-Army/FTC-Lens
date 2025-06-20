@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { DetectedNumber } from "../types/CameraTypes";
 
 interface NumberOverlaysProps {
@@ -12,16 +12,19 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
   return (
     <>
       {detectedNumbers.map((number, index) => {
-        const { boundingBox } = number;
+        const { cornerPoints } = number;
 
-        // Use absolute pixel coordinates directly
-        const left = boundingBox.left;
-        const top = boundingBox.top;
-        const width = boundingBox.right - boundingBox.left;
-        const height = boundingBox.bottom - boundingBox.top;
+        // 0 = top left, 1 = top right, 2 = bottom right, 3 = bottom left
+        const left = cornerPoints[0].x;
+        const top = cornerPoints[0].y;
+        const width = cornerPoints[1].x - cornerPoints[0].x;
+        const height = cornerPoints[3].y - cornerPoints[0].y;
 
         return (
-          <View
+          <TouchableOpacity
+            onPress={() => {
+              console.log("a");
+            }}
             key={`${number.text}-${index}`}
             style={[
               styles.overlay,
@@ -35,7 +38,7 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
           >
             <View style={styles.border} />
             <Text style={styles.text}>{number.text}</Text>
-          </View>
+          </TouchableOpacity>
         );
       })}
     </>
