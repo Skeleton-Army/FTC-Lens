@@ -89,15 +89,6 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
         const width = Math.abs(topRight.x - topLeft.x);
         const height = Math.abs(bottomLeft.y - topLeft.y);
 
-        console.log("rotated:");
-        console.log(rotated);
-        console.log("transformed:");
-        console.log(transformed);
-        console.log("preview: " + previewSize.width + "," + previewSize.height);
-        console.log("frame: " + frameSize.width + "," + frameSize.height);
-        console.log("top: " + top);
-        console.log("left: " + left);
-
         return (
           <TouchableOpacity
             onPress={() => {

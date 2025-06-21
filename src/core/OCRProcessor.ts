@@ -22,11 +22,12 @@ export const useOCRDetection = () => {
     return Worklets.createRunOnJS(updateDetectedNumbers);
   };
 
+  const onNumberDetected = createNumberDetectionWorklet();
+
   return {
     detectedNumbers,
     frameSize,
-    updateDetectedNumbers,
-    createNumberDetectionWorklet,
+    onNumberDetected,
   };
 };
 
@@ -55,8 +56,7 @@ export const processOCRFrame = (
         line.elements.forEach((word) => {
           // Check if text is a 4-5 digit number
           if (/\b\d{4,5}\b/g.test(word.text)) {
-            console.log(word.text);
-            console.log(word.cornerPoints);
+            console.log("DETECTED: " + word.text);
 
             if (word.cornerPoints) {
               detectedNumbers.push({

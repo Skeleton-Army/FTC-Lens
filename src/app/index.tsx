@@ -15,8 +15,7 @@ import { cameraStyles } from "../styles/cameraStyles";
 
 export default function Index() {
   const { device, hasPermission, requestPermission, camera } = useCamera();
-  const { detectedNumbers, frameSize, createNumberDetectionWorklet } =
-    useOCRDetection();
+  const { detectedNumbers, frameSize, onNumberDetected } = useOCRDetection();
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
 
   const {
@@ -29,8 +28,6 @@ export default function Index() {
   } = usePhotoCapture(camera);
 
   const { zoom, gesture } = useZoomGesture(device);
-
-  const onNumberDetected = createNumberDetectionWorklet();
 
   if (!hasPermission) {
     return <NoPermissionView onRequestPermission={requestPermission} />;
