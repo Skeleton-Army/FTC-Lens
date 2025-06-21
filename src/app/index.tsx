@@ -6,7 +6,6 @@ import { NumberOverlays } from "../components/NumberOverlays";
 import { FlashOverlay, ToastMessage } from "../components/Overlays";
 import { NoDeviceView, NoPermissionView } from "../components/PermissionViews";
 import { PhotoCaptureView } from "../components/PhotoCaptureView";
-import { RedDotOverlay } from "../components/RedDotOverlay";
 import { useOCRDetection } from "../core/OCRProcessor";
 import { useCamera } from "../hooks/useCamera";
 import { usePhotoCapture } from "../hooks/usePhotoCapture";
@@ -70,9 +69,6 @@ export default function Index() {
         previewSize={previewSize}
         frameSize={frameSize}
       />
-
-      {/* Red dot at coordinates (500, 300) */}
-      <RedDotOverlay x={1860} y={500} />
 
       {/* Capture button */}
       <CaptureButton onPress={takePhoto} />
