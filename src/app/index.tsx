@@ -20,11 +20,12 @@ export default function Index() {
   const {
     viewShotRef,
     capturedPhotoUri,
+    capturedNumbers,
     flashOpacity,
     toastOpacity,
     takePhoto,
     handleImageLoad,
-  } = usePhotoCapture(camera);
+  } = usePhotoCapture(camera, detectedNumbers);
 
   const { zoom, gesture } = useZoomGesture(device);
 
@@ -49,7 +50,7 @@ export default function Index() {
         viewShotRef={viewShotRef}
         capturedPhotoUri={capturedPhotoUri}
         onImageLoad={handleImageLoad}
-        detectedNumbers={detectedNumbers}
+        detectedNumbers={capturedNumbers}
         previewSize={previewSize}
         frameSize={frameSize}
       />

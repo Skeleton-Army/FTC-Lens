@@ -4,10 +4,15 @@ import { Alert } from "react-native";
 import { useSharedValue, withTiming } from "react-native-reanimated";
 import ViewShot from "react-native-view-shot";
 import { Camera } from "react-native-vision-camera";
+import { DetectedNumber } from "../types/CameraTypes";
 
-export const usePhotoCapture = (camera: React.RefObject<Camera | null>) => {
+export const usePhotoCapture = (
+  camera: React.RefObject<Camera | null>,
+  detectedNumbers: DetectedNumber[]
+) => {
   const viewShotRef = useRef<ViewShot>(null);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
+  const [capturedNumbers, setCapturedNumbers] = useState<DetectedNumber[]>([]);
   const flashOpacity = useSharedValue(0);
   const toastOpacity = useSharedValue(0);
 
@@ -22,6 +27,9 @@ export const usePhotoCapture = (camera: React.RefObject<Camera | null>) => {
         // Step 2: Set the captured photo URI to display it inside ViewShot
         // This allows ViewShot to capture the photo + overlay together
         setCapturedPhotoUri(photoUri);
+
+        // Capture the detected numbers at the moment the photo is taken
+        setCapturedNumbers([...detectedNumbers]);
 
         flashOpacity.value = withTiming(1, { duration: 100 }, () => {
           flashOpacity.value = withTiming(0, { duration: 100 });
@@ -42,8 +50,9 @@ export const usePhotoCapture = (camera: React.RefObject<Camera | null>) => {
         // This captures the photo + overlay as a single image
         const viewShotUri = await viewShotRef.current.capture();
 
-        // Step 4: Clear the captured photo URI as it is not needed anymore
+        // Step 4: Clear the captured photo URI and numbers as they are not needed anymore
         setCapturedPhotoUri(null);
+        setCapturedNumbers([]);
 
         // Step 5: Save the ViewShot capture (photo + overlay) to camera roll
         await CameraRoll.saveAsset(viewShotUri, {
@@ -64,6 +73,7 @@ export const usePhotoCapture = (camera: React.RefObject<Camera | null>) => {
   return {
     viewShotRef,
     capturedPhotoUri,
+    capturedNumbers,
     flashOpacity,
     toastOpacity,
     takePhoto,
