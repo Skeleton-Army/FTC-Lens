@@ -8,6 +8,19 @@ interface NumberOverlaysProps {
   frameSize: { width: number; height: number };
 }
 
+/**
+ * Transforms coordinates from camera frame space to preview display space.
+ *
+ * This function handles the coordinate mapping when the camera frame and preview
+ * have different aspect ratios, applying center-crop scaling to maintain the
+ * correct visual alignment of detected number overlays.
+ *
+ * @param x - X coordinate in frame space
+ * @param y - Y coordinate in frame space
+ * @param frameSize - Dimensions of the camera frame
+ * @param previewSize - Dimensions of the preview display
+ * @returns Transformed coordinates in preview space
+ */
 function transformCoordinates(
   x: number,
   y: number,
@@ -39,11 +52,22 @@ function transformCoordinates(
   };
 }
 
-// The camera is in portrait orientation, but
-// The camera frame coordinates are in landscape, where:
-// x increases top → bottom
-// y increases right → left
-// We want to rotate those coordinates 90° clockwise to portrait format
+/**
+ * Rotates coordinates from landscape camera frame to portrait display orientation.
+ *
+ * The camera captures frames in landscape orientation where:
+ * - X increases from top to bottom
+ * - Y increases from right to left
+ *
+ * This function rotates the coordinates 90° clockwise to match the portrait
+ * display orientation where:
+ * - X increases from left to right
+ * - Y increases from top to bottom
+ *
+ * @param pt - Point coordinates in landscape frame space
+ * @param frameSize - Dimensions of the landscape frame
+ * @returns Rotated coordinates in portrait display space
+ */
 function rotateToPortrait(
   pt: { x: number; y: number },
   frameSize: { width: number; height: number } // LANDSCAPE
@@ -63,9 +87,13 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
     <>
       {detectedNumbers.map((number, index) => {
         const { cornerPoints } = number;
+
+        // Step 1: Rotate coordinates from landscape to portrait
         const rotated = cornerPoints.map((pt) =>
           rotateToPortrait(pt, frameSize)
         );
+
+        // Step 2: Transform coordinates from frame space to preview space
         const transformed = rotated.map((pt) =>
           transformCoordinates(
             pt.x,
