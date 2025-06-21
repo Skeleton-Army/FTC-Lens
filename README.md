@@ -1,4 +1,4 @@
-# FTC Lens 📱📷
+# FTC Lens
 
 FTC Lens is a real-time camera app that identifies FTC team numbers and instantly shows their team name and stats—perfect for quick recognition and strategy at competitions.
 
