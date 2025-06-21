@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View } from "react-native";
 import { CameraView } from "../components/CameraView";
 import { CaptureButton } from "../components/CaptureButton";
@@ -5,6 +6,7 @@ import { NumberOverlays } from "../components/NumberOverlays";
 import { FlashOverlay, ToastMessage } from "../components/Overlays";
 import { NoDeviceView, NoPermissionView } from "../components/PermissionViews";
 import { PhotoCaptureView } from "../components/PhotoCaptureView";
+import { RedDotOverlay } from "../components/RedDotOverlay";
 import { useOCRDetection } from "../core/OCRProcessor";
 import { useCamera } from "../hooks/useCamera";
 import { usePhotoCapture } from "../hooks/usePhotoCapture";
@@ -13,8 +15,9 @@ import { cameraStyles } from "../styles/cameraStyles";
 
 export default function Index() {
   const { device, hasPermission, requestPermission, camera } = useCamera();
-
-  const { detectedNumbers, createNumberDetectionWorklet } = useOCRDetection();
+  const { detectedNumbers, frameSize, createNumberDetectionWorklet } =
+    useOCRDetection();
+  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
 
   const {
     viewShotRef,
@@ -38,13 +41,21 @@ export default function Index() {
   }
 
   return (
-    <View style={cameraStyles.container}>
+    <View
+      style={cameraStyles.container}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setPreviewSize({ width, height });
+      }}
+    >
       {/* Photo capture view for capturing with ViewShot */}
       <PhotoCaptureView
         viewShotRef={viewShotRef}
         capturedPhotoUri={capturedPhotoUri}
         onImageLoad={handleImageLoad}
         detectedNumbers={detectedNumbers}
+        previewSize={previewSize}
+        frameSize={frameSize}
       />
 
       {/* Main camera view with gesture handling */}
@@ -57,7 +68,14 @@ export default function Index() {
       />
 
       {/* Live number overlays */}
-      <NumberOverlays detectedNumbers={detectedNumbers} />
+      <NumberOverlays
+        detectedNumbers={detectedNumbers}
+        previewSize={previewSize}
+        frameSize={frameSize}
+      />
+
+      {/* Red dot at coordinates (500, 300) */}
+      <RedDotOverlay x={1860} y={500} />
 
       {/* Capture button */}
       <CaptureButton onPress={takePhoto} />

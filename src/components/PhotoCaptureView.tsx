@@ -9,6 +9,8 @@ interface PhotoCaptureViewProps {
   capturedPhotoUri: string | null;
   onImageLoad: () => void;
   detectedNumbers?: DetectedNumber[];
+  previewSize: { width: number; height: number };
+  frameSize: { width: number; height: number };
 }
 
 export const PhotoCaptureView: React.FC<PhotoCaptureViewProps> = ({
@@ -16,6 +18,8 @@ export const PhotoCaptureView: React.FC<PhotoCaptureViewProps> = ({
   capturedPhotoUri,
   onImageLoad,
   detectedNumbers = [],
+  previewSize,
+  frameSize,
 }) => {
   return (
     <ViewShot
@@ -33,7 +37,11 @@ export const PhotoCaptureView: React.FC<PhotoCaptureViewProps> = ({
         />
       )}
 
-      <NumberOverlays detectedNumbers={detectedNumbers} />
+      <NumberOverlays
+        detectedNumbers={detectedNumbers}
+        previewSize={previewSize}
+        frameSize={frameSize}
+      />
     </ViewShot>
   );
 };

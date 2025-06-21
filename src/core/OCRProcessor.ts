@@ -6,9 +6,16 @@ import { DetectedNumber } from "../types/CameraTypes";
 
 export const useOCRDetection = () => {
   const [detectedNumbers, setDetectedNumbers] = useState<DetectedNumber[]>([]);
+  const [frameSize, setFrameSize] = useState<{ width: number; height: number }>(
+    { width: 0, height: 0 }
+  );
 
-  const updateDetectedNumbers = (detectedNumbers: DetectedNumber[]) => {
+  const updateDetectedNumbers = (
+    detectedNumbers: DetectedNumber[],
+    frameSize: { width: number; height: number }
+  ) => {
     setDetectedNumbers(detectedNumbers);
+    setFrameSize(frameSize);
   };
 
   const createNumberDetectionWorklet = () => {
@@ -17,6 +24,7 @@ export const useOCRDetection = () => {
 
   return {
     detectedNumbers,
+    frameSize,
     updateDetectedNumbers,
     createNumberDetectionWorklet,
   };
@@ -24,7 +32,10 @@ export const useOCRDetection = () => {
 
 export const processOCRFrame = (
   frame: any,
-  onNumberDetected: (numbers: DetectedNumber[]) => void
+  onNumberDetected: (
+    numbers: DetectedNumber[],
+    frameSize: { width: number; height: number }
+  ) => void
 ) => {
   "worklet";
 
@@ -32,6 +43,12 @@ export const processOCRFrame = (
     "worklet";
     const scannedOcr = scanOCR(frame);
     const detectedNumbers: DetectedNumber[] = [];
+
+    // Extract frame dimensions
+    const frameSize = {
+      width: frame.width,
+      height: frame.height,
+    };
 
     scannedOcr.result.blocks.forEach((block) => {
       block.lines.forEach((line) => {
@@ -52,6 +69,6 @@ export const processOCRFrame = (
       });
     });
 
-    onNumberDetected(detectedNumbers);
+    onNumberDetected(detectedNumbers, frameSize);
   });
 };
