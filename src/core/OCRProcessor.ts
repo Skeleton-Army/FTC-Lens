@@ -45,6 +45,94 @@ export const useOCRDetection = () => {
   };
 };
 
+/**
+ * Extracts all 3-5 digit number substrings from the given text.
+ *
+ * @param text - The string to search for digit substrings.
+ * @returns An array of objects, each containing the matched number text and its start/end indices in the string.
+ */
+const extractNumbers = (text: string) => {
+  "worklet";
+  const matches: { text: string; start: number; end: number }[] = [];
+  const regex = /\d{3,5}/g;
+
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    matches.push({
+      text: match[0],
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+
+  return matches;
+};
+
+/**
+ * Constructs a bounding box for a detected number substring using the corner points
+ * of the first and last symbols that make up the substring.
+ *
+ * @param numberSymbols - An array of symbol objects representing the sequence of symbols for the detected number substring.
+ * @returns An array of 4 points (top-left, top-right, bottom-right, bottom-left).
+ */
+const getBoundingBox = (numberSymbols: any[]): Point[] => {
+  "worklet";
+  if (!numberSymbols.length) return [];
+
+  const firstSymbol = numberSymbols[0];
+  const lastSymbol = numberSymbols[numberSymbols.length - 1];
+
+  if (
+    firstSymbol.cornerPoints &&
+    lastSymbol.cornerPoints &&
+    firstSymbol.cornerPoints.length === 4 &&
+    lastSymbol.cornerPoints.length === 4
+  ) {
+    // Order: top-left, top-right, bottom-right, bottom-left
+    return [
+      firstSymbol.cornerPoints[0], // top-left
+      lastSymbol.cornerPoints[1], // top-right
+      lastSymbol.cornerPoints[2], // bottom-right
+      firstSymbol.cornerPoints[3], // bottom-left
+    ];
+  }
+
+  return [];
+};
+
+/**
+ * Processes a word element for all number substrings inside it and adds them to the detectedNumbers array.
+ *
+ * @param word - The word element from the text recognition to process
+ * @param detectedNumbers - The array to which valid numbers will be added.
+ */
+const detectNumbersInWord = (word: any, detectedNumbers: DetectedNumber[]) => {
+  "worklet";
+  const matches = extractNumbers(word.text);
+
+  if (
+    matches.length > 0 &&
+    Array.isArray(word.symbols) &&
+    word.symbols?.every((s: any) => s && Array.isArray(s.cornerPoints))
+  ) {
+    matches.forEach((m) => {
+      // Get the sequence of symbols corresponding to this detected number substring
+      const numberSymbols = word.symbols
+        ? word.symbols.slice(m.start, m.end)
+        : [];
+      const cornerPoints = getBoundingBox(numberSymbols);
+
+      if (cornerPoints.length === 4) {
+        detectedNumbers.push({
+          text: m.text,
+          cornerPoints,
+        });
+        console.log("DETECTED: " + m.text);
+      }
+    });
+  }
+};
+
 export const processOCRFrame = (
   frame: any,
   onNumberDetected: (
@@ -68,59 +156,7 @@ export const processOCRFrame = (
     scannedOcr.result.blocks.forEach((block) => {
       block.lines.forEach((line) => {
         line.elements.forEach((word) => {
-          // Find all 3-5 digit numbers in the word text
-          const matches = [];
-          const regex = /\d{3,5}/g;
-          let match;
-          while ((match = regex.exec(word.text)) !== null) {
-            matches.push({
-              text: match[0],
-              start: match.index,
-              end: match.index + match[0].length,
-            });
-          }
-
-          if (
-            matches.length > 0 &&
-            Array.isArray(word.symbols) &&
-            word.symbols?.every((s) => s && Array.isArray(s.cornerPoints))
-          ) {
-            matches.forEach((m) => {
-              // Find the symbols that correspond to this match
-              const symbolSlice = word.symbols
-                ? word.symbols.slice(m.start, m.end)
-                : [];
-
-              // Collect all corner points from the symbols
-              let cornerPoints: Point[] = [];
-              if (symbolSlice.length > 0) {
-                const firstSymbol = symbolSlice[0];
-                const lastSymbol = symbolSlice[symbolSlice.length - 1];
-                if (
-                  firstSymbol.cornerPoints &&
-                  lastSymbol.cornerPoints &&
-                  firstSymbol.cornerPoints.length === 4 &&
-                  lastSymbol.cornerPoints.length === 4
-                ) {
-                  // Order: top-left, top-right, bottom-right, bottom-left
-                  cornerPoints = [
-                    firstSymbol.cornerPoints[0], // top-left
-                    lastSymbol.cornerPoints[1], // top-right
-                    lastSymbol.cornerPoints[2], // bottom-right
-                    firstSymbol.cornerPoints[3], // bottom-left
-                  ];
-                }
-              }
-
-              if (cornerPoints.length === 4) {
-                detectedNumbers.push({
-                  text: m.text,
-                  cornerPoints,
-                });
-                console.log("DETECTED: " + m.text);
-              }
-            });
-          }
+          detectNumbersInWord(word, detectedNumbers);
         });
       });
     });
