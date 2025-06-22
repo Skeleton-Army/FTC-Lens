@@ -1,35 +1,19 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { TeamInfo, teamService } from "../core/TeamService";
 import { DetectedNumber } from "../types/CameraTypes";
 
 export const useTeamInfo = () => {
-  const [loadingTeams, setLoadingTeams] = useState<Set<string>>(new Set());
-
   const fetchTeamInfo = useCallback(
     async (teamNumber: string): Promise<TeamInfo | null> => {
-      // Check if already loading
-      if (loadingTeams.has(teamNumber)) {
-        return null;
-      }
-
-      // Mark as loading
-      setLoadingTeams((prev) => new Set(prev).add(teamNumber));
-
       try {
         const teamInfo = await teamService.getTeamInfo(teamNumber);
         return teamInfo;
       } catch (error) {
         console.error(`Error fetching team info for ${teamNumber}:`, error);
         return null;
-      } finally {
-        setLoadingTeams((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(teamNumber);
-          return newSet;
-        });
       }
     },
-    [loadingTeams]
+    []
   );
 
   const enrichDetectedNumbers = useCallback(
@@ -54,7 +38,6 @@ export const useTeamInfo = () => {
   );
 
   return {
-    loadingTeams,
     fetchTeamInfo,
     enrichDetectedNumbers,
   };
