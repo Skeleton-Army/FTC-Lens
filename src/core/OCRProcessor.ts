@@ -54,8 +54,8 @@ export const processOCRFrame = (
     scannedOcr.result.blocks.forEach((block) => {
       block.lines.forEach((line) => {
         line.elements.forEach((word) => {
-          // Check if text is a 4-5 digit number
-          if (/\b\d{4,5}\b/g.test(word.text)) {
+          // Check if text is a 3-5 digit number (no special characters)
+          if (/^\d{3,5}$/.test(word.text.trim())) {
             console.log("DETECTED: " + word.text);
 
             if (word.cornerPoints) {
