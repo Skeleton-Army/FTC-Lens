@@ -120,7 +120,7 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
         return (
           <TouchableOpacity
             onPress={() => {
-              console.log("a");
+              console.log("Number pressed:", number.text);
             }}
             key={`${number.text}-${index}`}
             style={[
@@ -147,6 +147,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 1000,
   },
   border: {
     position: "absolute",
