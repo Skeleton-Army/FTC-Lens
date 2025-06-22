@@ -5,6 +5,7 @@ import Reanimated, { useAnimatedProps } from "react-native-reanimated";
 import {
   Camera,
   CameraProps,
+  useCameraFormat,
   useFrameProcessor,
 } from "react-native-vision-camera";
 import { processOCRFrame } from "../core/OCRProcessor";
@@ -33,6 +34,11 @@ export const CameraView: React.FC<CameraViewProps> = ({
   gesture,
   onNumberDetected,
 }) => {
+  const format = useCameraFormat(device, [
+    { fps: 60 },
+    // { videoResolution: { width: 1920, height: 1080 } },
+  ]);
+
   const frameProcessor = useFrameProcessor(
     (frame) => {
       "worklet";
@@ -56,6 +62,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
         animatedProps={animatedProps}
         photo={true}
         frameProcessor={frameProcessor}
+        format={format}
       />
     </GestureDetector>
   );
