@@ -121,17 +121,22 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
           )
         );
 
-        const topLeft = transformed[0];
-        const topRight = transformed[1];
-        //const bottomRight = transformed[2];
-        const bottomLeft = transformed[3];
+        // Step 3: Calculate width, height, and rotation angle for the overlay rectangle
+        const [topLeft, topRight, bottomRight, bottomLeft] = transformed;
+        const width = Math.hypot(
+          topRight.x - topLeft.x,
+          topRight.y - topLeft.y
+        );
+        const height = Math.hypot(
+          bottomLeft.x - topLeft.x,
+          bottomLeft.y - topLeft.y
+        );
+        const angleRad = Math.atan2(
+          topRight.y - topLeft.y,
+          topRight.x - topLeft.x
+        );
+        const angleDeg = (angleRad * 180) / Math.PI;
 
-        const top = topLeft.y;
-        const left = topLeft.x;
-        const width = Math.abs(topRight.x - topLeft.x);
-        const height = Math.abs(bottomLeft.y - topLeft.y);
-
-        // Display team number and name (all numbers now have team info)
         const displayText = `${number.text}\n${number.teamInfo!.name}`;
 
         return (
@@ -141,10 +146,18 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
             style={[
               styles.overlay,
               {
-                left,
-                top,
                 width,
                 height,
+                left: topLeft.x,
+                top: topLeft.y,
+                transform: [
+                  // Rotate around the top-left corner by shifting the origin to the top-left, rotating, then shifting back
+                  { translateX: -width / 2 },
+                  { translateY: -height / 2 },
+                  { rotate: `${angleDeg}deg` },
+                  { translateX: width / 2 },
+                  { translateY: height / 2 },
+                ],
               },
             ]}
           >
