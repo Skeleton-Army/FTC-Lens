@@ -26,17 +26,11 @@ export interface QuickStats {
 }
 
 class TeamService {
-  private cache = new Map<string, TeamInfo>();
+  private cache = new Map<string, TeamInfo | null>();
   private statsCache = new Map<string, QuickStats>();
-  private invalidTeamsCache = new Set<string>(); // Cache for teams that don't exist
   private baseUrl = "https://api.ftcscout.org/rest/v1";
 
   async getTeamInfo(teamNumber: string): Promise<TeamInfo | null> {
-    // Check if we already know this team doesn't exist
-    if (this.invalidTeamsCache.has(teamNumber)) {
-      return null;
-    }
-
     // Check cache first
     if (this.cache.has(teamNumber)) {
       return this.cache.get(teamNumber)!;
@@ -49,7 +43,7 @@ class TeamService {
         if (response.status === 404) {
           console.log(`Team ${teamNumber} not found`);
           // Cache that this team doesn't exist
-          this.invalidTeamsCache.add(teamNumber);
+          this.cache.set(teamNumber, null);
           return null;
         }
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -129,7 +123,6 @@ class TeamService {
   clearCache() {
     this.cache.clear();
     this.statsCache.clear();
-    this.invalidTeamsCache.clear();
   }
 }
 

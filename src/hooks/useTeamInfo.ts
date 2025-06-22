@@ -3,18 +3,10 @@ import { TeamInfo, teamService } from "../core/TeamService";
 import { DetectedNumber } from "../types/CameraTypes";
 
 export const useTeamInfo = () => {
-  const [teamInfoCache, setTeamInfoCache] = useState<Map<string, TeamInfo>>(
-    new Map()
-  );
   const [loadingTeams, setLoadingTeams] = useState<Set<string>>(new Set());
 
   const fetchTeamInfo = useCallback(
     async (teamNumber: string): Promise<TeamInfo | null> => {
-      // Check if already cached
-      if (teamInfoCache.has(teamNumber)) {
-        return teamInfoCache.get(teamNumber)!;
-      }
-
       // Check if already loading
       if (loadingTeams.has(teamNumber)) {
         return null;
@@ -25,11 +17,6 @@ export const useTeamInfo = () => {
 
       try {
         const teamInfo = await teamService.getTeamInfo(teamNumber);
-
-        if (teamInfo) {
-          setTeamInfoCache((prev) => new Map(prev).set(teamNumber, teamInfo));
-        }
-
         return teamInfo;
       } catch (error) {
         console.error(`Error fetching team info for ${teamNumber}:`, error);
@@ -42,7 +29,7 @@ export const useTeamInfo = () => {
         });
       }
     },
-    [teamInfoCache, loadingTeams]
+    [loadingTeams]
   );
 
   const enrichDetectedNumbers = useCallback(
@@ -66,16 +53,9 @@ export const useTeamInfo = () => {
     [fetchTeamInfo]
   );
 
-  const clearCache = useCallback(() => {
-    setTeamInfoCache(new Map());
-    teamService.clearCache();
-  }, []);
-
   return {
-    teamInfoCache,
     loadingTeams,
     fetchTeamInfo,
     enrichDetectedNumbers,
-    clearCache,
   };
 };
