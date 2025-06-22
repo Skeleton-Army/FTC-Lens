@@ -3,6 +3,8 @@ import { TeamInfo, teamService } from "../core/TeamService";
 import { DetectedNumber } from "../types/CameraTypes";
 
 export const useTeamInfo = () => {
+  // Keeps track of which team numbers are currently being fetched.
+  // This prevents duplicate requests for the same team number.
   const [loadingTeams, setLoadingTeams] = useState<Set<string>>(new Set());
 
   const fetchTeamInfo = useCallback(
