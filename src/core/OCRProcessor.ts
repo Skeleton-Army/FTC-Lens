@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { runAsync } from "react-native-vision-camera";
 import { Worklets } from "react-native-worklets-core";
 import { useTeamInfo } from "../hooks/useTeamInfo";
-import { DetectedNumber } from "../types/CameraTypes";
+import { DetectedNumber, Point } from "../types/CameraTypes";
 
 export const useOCRDetection = () => {
   const [detectedNumbers, setDetectedNumbers] = useState<DetectedNumber[]>([]);
@@ -68,19 +68,58 @@ export const processOCRFrame = (
     scannedOcr.result.blocks.forEach((block) => {
       block.lines.forEach((line) => {
         line.elements.forEach((word) => {
-          // Remove all special characters from the text
-          const cleanedText = word.text.replace(/[^\d]/g, "");
+          // Find all 3-5 digit numbers in the word text
+          const matches = [];
+          const regex = /\d{3,5}/g;
+          let match;
+          while ((match = regex.exec(word.text)) !== null) {
+            matches.push({
+              text: match[0],
+              start: match.index,
+              end: match.index + match[0].length,
+            });
+          }
 
-          // Check if it is a 3-5 digit number
-          if (/^\d{3,5}$/.test(cleanedText)) {
-            console.log("DETECTED: " + cleanedText);
+          if (
+            matches.length > 0 &&
+            Array.isArray(word.symbols) &&
+            word.symbols?.every((s) => s && Array.isArray(s.cornerPoints))
+          ) {
+            matches.forEach((m) => {
+              // Find the symbols that correspond to this match
+              const symbolSlice = word.symbols
+                ? word.symbols.slice(m.start, m.end)
+                : [];
 
-            if (word.cornerPoints) {
-              detectedNumbers.push({
-                text: cleanedText,
-                cornerPoints: word.cornerPoints,
-              });
-            }
+              // Collect all corner points from the symbols
+              let cornerPoints: Point[] = [];
+              if (symbolSlice.length > 0) {
+                const firstSymbol = symbolSlice[0];
+                const lastSymbol = symbolSlice[symbolSlice.length - 1];
+                if (
+                  firstSymbol.cornerPoints &&
+                  lastSymbol.cornerPoints &&
+                  firstSymbol.cornerPoints.length === 4 &&
+                  lastSymbol.cornerPoints.length === 4
+                ) {
+                  // Order: top-left, top-right, bottom-right, bottom-left
+                  cornerPoints = [
+                    firstSymbol.cornerPoints[0], // top-left
+                    lastSymbol.cornerPoints[1], // top-right
+                    lastSymbol.cornerPoints[2], // bottom-right
+                    firstSymbol.cornerPoints[3], // bottom-left
+                  ];
+                }
+              }
+
+              if (cornerPoints.length === 4) {
+                detectedNumbers.push({
+                  text: m.text,
+                  cornerPoints,
+                });
+                console.log("DETECTED: " + m.text);
+              }
+            });
           }
         });
       });
