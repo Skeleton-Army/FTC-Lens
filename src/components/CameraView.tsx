@@ -63,6 +63,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
         photo={true}
         frameProcessor={frameProcessor}
         format={format}
+        outputOrientation={"preview"} // Match photo to preview orientation. This prevents issues with landscape photos being rotated incorrectly.
       />
     </GestureDetector>
   );
