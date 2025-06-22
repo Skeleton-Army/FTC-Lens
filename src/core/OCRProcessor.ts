@@ -1,7 +1,8 @@
 import { scanOCR } from "@ismaelmoreiraa/vision-camera-ocr";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { runAsync } from "react-native-vision-camera";
 import { Worklets } from "react-native-worklets-core";
+import { useTeamInfo } from "../hooks/useTeamInfo";
 import { DetectedNumber } from "../types/CameraTypes";
 
 export const useOCRDetection = () => {
@@ -9,14 +10,27 @@ export const useOCRDetection = () => {
   const [frameSize, setFrameSize] = useState<{ width: number; height: number }>(
     { width: 0, height: 0 }
   );
+  const { enrichDetectedNumbers } = useTeamInfo();
 
-  const updateDetectedNumbers = (
-    detectedNumbers: DetectedNumber[],
-    frameSize: { width: number; height: number }
-  ) => {
-    setDetectedNumbers(detectedNumbers);
-    setFrameSize(frameSize);
-  };
+  const updateDetectedNumbers = useCallback(
+    async (
+      detectedNumbers: DetectedNumber[],
+      frameSize: { width: number; height: number }
+    ) => {
+      setFrameSize(frameSize);
+
+      // Enrich detected numbers with team information and filter out invalid teams
+      const enrichedNumbers = await enrichDetectedNumbers(detectedNumbers);
+
+      // Only keep numbers that have valid team information
+      const validTeams = enrichedNumbers.filter(
+        (number) => number.teamInfo !== undefined
+      );
+
+      setDetectedNumbers(validTeams);
+    },
+    [enrichDetectedNumbers]
+  );
 
   const createNumberDetectionWorklet = () => {
     return Worklets.createRunOnJS(updateDetectedNumbers);
@@ -54,13 +68,16 @@ export const processOCRFrame = (
     scannedOcr.result.blocks.forEach((block) => {
       block.lines.forEach((line) => {
         line.elements.forEach((word) => {
-          // Check if text is a 4-5 digit number (no special characters)
-          if (/^\d{4,5}$/.test(word.text.trim())) {
-            console.log("DETECTED: " + word.text);
+          // Remove all special characters from the text
+          const cleanedText = word.text.replace(/[^\d]/g, "");
+
+          // Check if it is a 3-5 digit number
+          if (/^\d{3,5}$/.test(cleanedText)) {
+            console.log("DETECTED: " + cleanedText);
 
             if (word.cornerPoints) {
               detectedNumbers.push({
-                text: word.text,
+                text: cleanedText,
                 cornerPoints: word.cornerPoints,
               });
             }

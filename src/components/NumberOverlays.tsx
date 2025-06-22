@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { DetectedNumber } from "../types/CameraTypes";
+import { TeamInfoModal } from "./TeamInfoModal";
 
 interface NumberOverlaysProps {
   detectedNumbers: DetectedNumber[];
@@ -83,6 +84,19 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
   previewSize,
   frameSize,
 }) => {
+  const [selectedTeam, setSelectedTeam] = useState<DetectedNumber | null>(null);
+
+  const handleTeamPress = (number: DetectedNumber) => {
+    if (number.teamInfo) {
+      setSelectedTeam(number);
+      console.log("Team pressed:", number.teamInfo.name, `(${number.text})`);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedTeam(null);
+  };
+
   return (
     <>
       {detectedNumbers.map((number, index) => {
@@ -117,11 +131,12 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
         const width = Math.abs(topRight.x - topLeft.x);
         const height = Math.abs(bottomLeft.y - topLeft.y);
 
+        // Display team number and name (all numbers now have team info)
+        const displayText = `${number.text}\n${number.teamInfo!.name}`;
+
         return (
           <TouchableOpacity
-            onPress={() => {
-              console.log("Number pressed:", number.text);
-            }}
+            onPress={() => handleTeamPress(number)}
             key={`${number.text}-${index}`}
             style={[
               styles.overlay,
@@ -134,10 +149,15 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
             ]}
           >
             <View style={styles.border} />
-            <Text style={styles.text}>{number.text}</Text>
+            <Text style={[styles.text, styles.teamText]}>{displayText}</Text>
           </TouchableOpacity>
         );
       })}
+
+      <TeamInfoModal
+        teamInfo={selectedTeam?.teamInfo || null}
+        onClose={closeModal}
+      />
     </>
   );
 };
@@ -165,5 +185,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
+    textAlign: "center",
+    lineHeight: 14,
+  },
+  teamText: {
+    fontSize: 11,
+    lineHeight: 13,
   },
 });

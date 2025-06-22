@@ -6,6 +6,15 @@ type Point = {
 export interface DetectedNumber {
   text: string;
   cornerPoints: Point[];
+  teamInfo?: TeamInfo;
+}
+
+export interface TeamInfo {
+  number: string;
+  name: string;
+  city?: string;
+  state?: string;
+  country?: string;
 }
 
 export interface CameraState {
