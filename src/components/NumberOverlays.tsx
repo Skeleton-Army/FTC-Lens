@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { DetectedNumber } from "../types/CameraTypes";
+import { calculateFontSize } from "../utils/calculateFontSize";
 import { TeamInfoModal } from "./TeamInfoModal";
 
 interface NumberOverlaysProps {
@@ -139,6 +140,17 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
 
         const displayText = `${number.text}\n${number.teamInfo!.name}`;
 
+        const maxFontSize = 16;
+        const minFontSize = 1;
+
+        const fontSize = calculateFontSize(
+          displayText,
+          width,
+          height,
+          maxFontSize,
+          minFontSize
+        );
+
         return (
           <TouchableOpacity
             onPress={() => handleTeamPress(number)}
@@ -162,7 +174,18 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
             ]}
           >
             <View style={styles.border} />
-            <Text style={[styles.text, styles.teamText]}>{displayText}</Text>
+            <Text
+              numberOfLines={2}
+              adjustsFontSizeToFit={true}
+              allowFontScaling={true}
+              style={[
+                styles.text,
+                styles.teamText,
+                { fontSize, lineHeight: fontSize },
+              ]}
+            >
+              {displayText}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -181,20 +204,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 5,
   },
   border: {
     position: "absolute",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "#00FF00",
     backgroundColor: "rgba(0, 255, 0, 0.1)",
     width: "100%",
     height: "100%",
+    borderRadius: 5,
   },
   text: {
     color: "#00FF00",
     fontSize: 12,
     fontWeight: "bold",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
