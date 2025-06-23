@@ -35,7 +35,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   onNumberDetected,
 }) => {
   const format = useCameraFormat(device, [
-    { fps: 60 },
+    { fps: 30 },
     // { videoResolution: { width: 1920, height: 1080 } },
   ]);
 
@@ -64,6 +64,8 @@ export const CameraView: React.FC<CameraViewProps> = ({
         frameProcessor={frameProcessor}
         format={format}
         outputOrientation={"preview"} // Match photo to preview orientation. This prevents issues with landscape photos being rotated incorrectly.
+        videoHdr={false}
+        enableBufferCompression={true}
       />
     </GestureDetector>
   );
