@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { View } from "react-native";
+import { Text, View } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
+import { runOnJS, useAnimatedReaction } from "react-native-reanimated";
 import { CameraView } from "../components/CameraView";
 import { CaptureButton } from "../components/CaptureButton";
 import { NumberOverlays } from "../components/NumberOverlays";
@@ -38,6 +39,16 @@ export default function Index() {
   // Compose gestures: tap-to-focus + zoom
   const gesture = Gesture.Simultaneous(tapToFocusGesture, zoomGesture);
 
+  // Zoom indicator state
+  const [zoomValue, setZoomValue] = useState(device?.neutralZoom ?? 1);
+  useAnimatedReaction(
+    () => zoom.value,
+    (current, prev) => {
+      if (current !== prev) runOnJS(setZoomValue)(current);
+    },
+    [zoom]
+  );
+
   if (!hasPermission) {
     return <NoPermissionView onRequestPermission={requestPermission} />;
   }
@@ -73,6 +84,26 @@ export default function Index() {
         onNumberDetected={onNumberDetected}
         focusPoint={focusPoint}
       />
+
+      {/* Zoom indicator */}
+      {zoomValue !== (device?.neutralZoom ?? 1) && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 160,
+            alignSelf: "center",
+            backgroundColor: "rgba(0,0,0,0.6)",
+            borderRadius: 16,
+            paddingHorizontal: 14,
+            paddingVertical: 6,
+            zIndex: 1001,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+            {zoomValue.toFixed(1)}x
+          </Text>
+        </View>
+      )}
 
       {/* Live number overlays */}
       <NumberOverlays
