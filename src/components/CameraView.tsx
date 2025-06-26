@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { useAnimatedProps } from "react-native-reanimated";
 import {
@@ -25,6 +25,7 @@ interface CameraViewProps {
     numbers: DetectedNumber[],
     frameSize: { width: number; height: number }
   ) => void;
+  focusPoint?: { x: number; y: number } | null;
 }
 
 export const CameraView: React.FC<CameraViewProps> = ({
@@ -33,6 +34,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   zoom,
   gesture,
   onNumberDetected,
+  focusPoint,
 }) => {
   const format = useCameraFormat(device, [
     { fps: 30 },
@@ -54,19 +56,40 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
   return (
     <GestureDetector gesture={gesture}>
-      <ReanimatedCamera
-        ref={camera}
-        style={StyleSheet.absoluteFill}
-        device={device}
-        isActive={true}
-        animatedProps={animatedProps}
-        photo={true}
-        frameProcessor={frameProcessor}
-        format={format}
-        outputOrientation={"preview"} // Match photo to preview orientation. This prevents issues with landscape photos being rotated incorrectly.
-        videoHdr={false}
-        enableBufferCompression={true}
-      />
+      <View style={StyleSheet.absoluteFill}>
+        <ReanimatedCamera
+          ref={camera}
+          style={StyleSheet.absoluteFill}
+          device={device}
+          isActive={true}
+          animatedProps={animatedProps}
+          photo={true}
+          frameProcessor={frameProcessor}
+          format={format}
+          outputOrientation={"preview"} // Match photo to preview orientation. This prevents issues with landscape photos being rotated incorrectly.
+          videoHdr={false}
+          enableBufferCompression={true}
+        />
+
+        {/* Focus indicator */}
+        {focusPoint && (
+          <Reanimated.View
+            style={[
+              {
+                position: "absolute",
+                left: focusPoint.x - 20,
+                top: focusPoint.y - 20,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 2,
+                borderColor: "#FFD700",
+                backgroundColor: "rgba(255, 215, 0, 0.2)",
+              },
+            ]}
+          />
+        )}
+      </View>
     </GestureDetector>
   );
 };

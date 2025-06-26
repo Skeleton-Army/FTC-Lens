@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View } from "react-native";
+import { Gesture } from "react-native-gesture-handler";
 import { CameraView } from "../components/CameraView";
 import { CaptureButton } from "../components/CaptureButton";
 import { NumberOverlays } from "../components/NumberOverlays";
@@ -9,6 +10,7 @@ import { PhotoCaptureView } from "../components/PhotoCaptureView";
 import { useOCRDetection } from "../core/OCRProcessor";
 import { useCamera } from "../hooks/useCamera";
 import { usePhotoCapture } from "../hooks/usePhotoCapture";
+import { useTapToFocus } from "../hooks/useTapToFocus";
 import { useZoomGesture } from "../hooks/useZoomGesture";
 import { cameraStyles } from "../styles/cameraStyles";
 
@@ -27,7 +29,14 @@ export default function Index() {
     handleImageLoad,
   } = usePhotoCapture(camera, detectedNumbers);
 
-  const { zoom, gesture } = useZoomGesture(device);
+  const { zoom, gesture: zoomGesture } = useZoomGesture(device);
+  const { gesture: tapToFocusGesture, focusPoint } = useTapToFocus(
+    camera,
+    previewSize
+  );
+
+  // Compose gestures: tap-to-focus + zoom
+  const gesture = Gesture.Simultaneous(tapToFocusGesture, zoomGesture);
 
   if (!hasPermission) {
     return <NoPermissionView onRequestPermission={requestPermission} />;
@@ -62,6 +71,7 @@ export default function Index() {
         zoom={zoom}
         gesture={gesture}
         onNumberDetected={onNumberDetected}
+        focusPoint={focusPoint}
       />
 
       {/* Live number overlays */}
