@@ -16,6 +16,7 @@ import { TeamInfo } from "../types/CameraTypes";
 interface TeamInfoModalProps {
   teamInfo: TeamInfo | null;
   onClose: () => void;
+  urlTemplate?: string;
 }
 
 interface StatRowProps {
@@ -28,6 +29,7 @@ interface StatRowProps {
 export const TeamInfoModal: React.FC<TeamInfoModalProps> = ({
   teamInfo,
   onClose,
+  urlTemplate,
 }) => {
   const [stats, setStats] = useState<QuickStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -54,9 +56,9 @@ export const TeamInfoModal: React.FC<TeamInfoModalProps> = ({
 
   const handleMoreInfo = async () => {
     if (!teamInfo) return;
-
-    const url = `https://ftcscout.org/teams/${teamInfo.number}`;
-
+    const url = urlTemplate
+      ? urlTemplate.replace("{TEAM}", String(teamInfo.number))
+      : `https://ftcscout.org/teams/${teamInfo.number}`;
     try {
       const supported = await Linking.canOpenURL(url);
 
@@ -187,9 +189,7 @@ export const TeamInfoModal: React.FC<TeamInfoModalProps> = ({
               style={styles.moreInfoButton}
               onPress={handleMoreInfo}
             >
-              <Text style={styles.moreInfoButtonText}>
-                More Info on FTC Scout
-              </Text>
+              <Text style={styles.moreInfoButtonText}>More Info</Text>
             </TouchableOpacity>
           </View>
         </View>

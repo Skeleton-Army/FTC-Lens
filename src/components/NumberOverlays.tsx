@@ -10,12 +10,14 @@ interface NumberOverlaysProps {
   detectedNumbers: DetectedNumber[];
   previewSize: { width: number; height: number };
   frameSize: { width: number; height: number };
+  urlTemplate?: string;
 }
 
 export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
   detectedNumbers,
   previewSize,
   frameSize,
+  urlTemplate,
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<DetectedNumber | null>(null);
 
@@ -125,6 +127,7 @@ export const NumberOverlays: React.FC<NumberOverlaysProps> = ({
       <TeamInfoModal
         teamInfo={selectedTeam?.teamInfo || null}
         onClose={closeModal}
+        urlTemplate={urlTemplate}
       />
     </>
   );

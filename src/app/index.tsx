@@ -1,4 +1,5 @@
-import { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import { runOnJS, useAnimatedReaction } from "react-native-reanimated";
@@ -9,12 +10,15 @@ import { NumberOverlays } from "../components/NumberOverlays";
 import { FlashOverlay, ToastMessage } from "../components/Overlays";
 import { NoDeviceView, NoPermissionView } from "../components/PermissionViews";
 import { PhotoCaptureView } from "../components/PhotoCaptureView";
+import { SettingsModal } from "../components/SettingsModal";
 import { useOCRDetection } from "../core/OCRProcessor";
 import { useCamera } from "../hooks/useCamera";
 import { usePhotoCapture } from "../hooks/usePhotoCapture";
 import { useTapToFocus } from "../hooks/useTapToFocus";
 import { useZoomGesture } from "../hooks/useZoomGesture";
 import { cameraStyles } from "../styles/cameraStyles";
+
+const URL_TEMPLATE_KEY = "url_template";
 
 export default function Index() {
   const { device, hasPermission, requestPermission, camera } = useCamera();
@@ -49,6 +53,24 @@ export default function Index() {
     },
     [zoom]
   );
+
+  // Add state to control settings modal
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [urlTemplate, setUrlTemplate] = useState(
+    "https://ftcscout.org/teams/{TEAM}"
+  );
+
+  // Load urlTemplate from storage on mount
+  useEffect(() => {
+    AsyncStorage.getItem(URL_TEMPLATE_KEY).then((saved) => {
+      if (saved) setUrlTemplate(saved);
+    });
+  }, []);
+
+  // Save urlTemplate to storage on change
+  useEffect(() => {
+    AsyncStorage.setItem(URL_TEMPLATE_KEY, urlTemplate);
+  }, [urlTemplate]);
 
   if (!hasPermission) {
     return <NoPermissionView onRequestPermission={requestPermission} />;
@@ -111,6 +133,7 @@ export default function Index() {
         detectedNumbers={detectedNumbers}
         previewSize={previewSize}
         frameSize={frameSize}
+        urlTemplate={urlTemplate}
       />
 
       {/* Capture button */}
@@ -143,9 +166,7 @@ export default function Index() {
             padding: 10,
             marginBottom: 18,
           }}
-          onPress={() => {
-            /* TODO: open settings */
-          }}
+          onPress={() => setSettingsVisible(true)}
         >
           <Ionicons name="settings-outline" size={28} color="#fff" />
         </TouchableOpacity>
@@ -165,6 +186,13 @@ export default function Index() {
           />
         </TouchableOpacity>
       </View>
+
+      <SettingsModal
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        url={urlTemplate}
+        onUrlChange={setUrlTemplate}
+      />
     </View>
   );
 }
