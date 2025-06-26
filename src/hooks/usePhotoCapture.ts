@@ -8,7 +8,8 @@ import { DetectedNumber } from "../types/CameraTypes";
 
 export const usePhotoCapture = (
   camera: React.RefObject<Camera | null>,
-  detectedNumbers: DetectedNumber[]
+  detectedNumbers: DetectedNumber[],
+  flash: boolean
 ) => {
   const viewShotRef = useRef<ViewShot>(null);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
@@ -21,7 +22,9 @@ export const usePhotoCapture = (
       if (camera.current) {
         // Step 1: Take a photo using the camera's native photo capture
         // This gives us the actual camera image without any overlays
-        const photo = await camera.current.takePhoto();
+        const photo = await camera.current.takePhoto({
+          flash: flash ? "on" : "off",
+        });
         const photoUri = `file://${photo.path}`;
 
         // Step 2: Set the captured photo URI to display it inside ViewShot

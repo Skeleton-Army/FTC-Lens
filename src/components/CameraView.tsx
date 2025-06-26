@@ -26,6 +26,7 @@ interface CameraViewProps {
     frameSize: { width: number; height: number }
   ) => void;
   focusPoint?: { x: number; y: number } | null;
+  flash?: boolean;
 }
 
 export const CameraView: React.FC<CameraViewProps> = ({
@@ -35,6 +36,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   gesture,
   onNumberDetected,
   focusPoint,
+  flash = false,
 }) => {
   const format = useCameraFormat(device, [
     { fps: 30 },
@@ -69,6 +71,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
           outputOrientation={"preview"} // Match photo to preview orientation. This prevents issues with landscape photos being rotated incorrectly.
           videoHdr={false}
           enableBufferCompression={true}
+          torch={flash ? "on" : "off"}
         />
 
         {/* Focus indicator */}

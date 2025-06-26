@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import { runOnJS, useAnimatedReaction } from "react-native-reanimated";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { CameraView } from "../components/CameraView";
 import { CaptureButton } from "../components/CaptureButton";
 import { NumberOverlays } from "../components/NumberOverlays";
@@ -19,7 +20,7 @@ export default function Index() {
   const { device, hasPermission, requestPermission, camera } = useCamera();
   const { detectedNumbers, frameSize, onNumberDetected } = useOCRDetection();
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
-
+  const [flash, setFlash] = useState(false);
   const {
     viewShotRef,
     capturedPhotoUri,
@@ -28,7 +29,7 @@ export default function Index() {
     toastOpacity,
     takePhoto,
     handleImageLoad,
-  } = usePhotoCapture(camera, detectedNumbers);
+  } = usePhotoCapture(camera, detectedNumbers, flash);
 
   const { zoom, gesture: zoomGesture } = useZoomGesture(device);
   const { gesture: tapToFocusGesture, focusPoint } = useTapToFocus(
@@ -123,6 +124,47 @@ export default function Index() {
         toastOpacity={toastOpacity}
         message="Photo saved to gallery"
       />
+
+      {/* Flash and Settings icons */}
+      <View
+        style={{
+          position: "absolute",
+          right: 24,
+          top: 60,
+          alignItems: "center",
+          zIndex: 1002,
+        }}
+      >
+        {/* Settings icon */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: "rgba(0,0,0,0.4)",
+            borderRadius: 24,
+            padding: 10,
+            marginBottom: 18,
+          }}
+          onPress={() => {
+            /* TODO: open settings */
+          }}
+        >
+          <Ionicons name="settings-outline" size={28} color="#fff" />
+        </TouchableOpacity>
+        {/* Flash icon */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: "rgba(0,0,0,0.4)",
+            borderRadius: 24,
+            padding: 10,
+          }}
+          onPress={() => setFlash((f) => !f)}
+        >
+          <Ionicons
+            name={flash ? "flash" : "flash-off"}
+            size={28}
+            color="#fff"
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
